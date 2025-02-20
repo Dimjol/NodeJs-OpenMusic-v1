@@ -27,26 +27,37 @@ class AlbumsService {
     return result.rows[0].id;
   }
 
-  async getAlbumById(id) {  // Ubah dari getalbumsById → getAlbumById
+  async getAlbumById(id) {
     const query = {
-      text: `
-        SELECT id, name, year 
-        FROM albums 
-        WHERE id = $1
-      `,
-      values: [id],
+        text: `
+            SELECT 
+                albums.id, 
+                albums.name, 
+                albums.year
+            FROM albums 
+            WHERE albums.id = $1
+        `,
+        values: [id],
     };
-
     const result = await this._pool.query(query);
-    
+    const songQuery = {
+      text: `SELECT id, title, performer
+            FROM songs WHERE "albumId" = $1`,
+      values: [id]
+    }
     if (!result.rows.length) {
       throw new NotFoundError('Album tidak ditemukan');
     }
-
-    return result.rows[0];
+    const songResult = await this._pool.query(songQuery);
+    const songs = songResult.rows.map(mapSongToDBModel);
+ 
+    return {
+      ...result.rows[0],
+      songs
+    }
   }
 
-  async editAlbumById(id, { name, year }) {  // Ubah dari editalbumsById → editAlbumById
+  async editAlbumById(id, { name, year }) {  
     const query = {
       text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
       values: [name, year, id],
@@ -59,7 +70,7 @@ class AlbumsService {
     }
   }
 
-  async deleteAlbumById(id) {  // Ubah dari deletealbumsById → deleteAlbumById
+  async deleteAlbumById(id) {  
     const query = {
       text: 'DELETE FROM albums WHERE id = $1 RETURNING id',
       values: [id],
@@ -73,4 +84,4 @@ class AlbumsService {
   }
 }
 
-module.exports = AlbumsService; // Ubah dari albumsService → AlbumsService
+module.exports = AlbumsService; 
